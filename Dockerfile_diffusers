@@ -1,0 +1,5 @@
+FROM danfu09/zoo:0.1
+
+# Set up diffusers
+RUN git clone https://github.com/HazyResearch/diffusers \
+    && cd diffusers && pip install -e .
