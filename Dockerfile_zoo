@@ -116,7 +116,7 @@ RUN git clone https://github.com/idiap/fast-transformers \
 RUN pip uninstall -y xgboost && DS_BUILD_UTILS=1 DS_BUILD_FUSED_LAMB=1 pip install deepspeed==0.7.3
 
 # General packages that we don't care about the version
-RUN pip install pytest matplotlib jupyter ipython ipdb gpustat scikit-learn spacy munch einops opt_einsum fvcore gsutil cmake pykeops \
+RUN pip install pytest matplotlib jupyter ipython ipdb gpustat scikit-learn spacy munch einops opt_einsum fvcore gsutil cmake pykeops sympy accelerate \
     && python -m spacy download en_core_web_sm
 # hydra
 RUN pip install hydra-core==1.2.0 hydra-colorlog==1.2.0 hydra-optuna-sweeper==1.2.0 pyrootutils rich
@@ -133,4 +133,13 @@ RUN pip install tensorboard seqeval psutil sacrebleu rouge-score tensorflow_data
 RUN git clone https://github.com/HazyResearch/flash-attention \
     && cd flash-attention && pip install . \
     && cd .. && rm -rf flash-attention
+
+# Install CUDA extensions for cross-entropy, fused dense, layer norm, fftconv
+COPY csrc csrc
+RUN cd csrc/xentropy && pip install . \
+    && cd ../layer_norm && pip install . \
+    && cd ../fused_dense_lib && pip install . \
+    && cd ../cauchy && pip install . \
+    && cd ../fftconv && pip install . \
+    && cd ../.. && rm -rf csrc
 

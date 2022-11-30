@@ -1,4 +1,61 @@
-FROM danfu09/zoo:0.1
+# Forked from https://github.com/tridao/zoo/blob/0c43127363a6bcf54ff200f215654e24e344f9ae/Dockerfile
+FROM nvcr.io/nvidia/pytorch:22.09-py3 as base
+
+ENV HOST docker
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+# https://serverfault.com/questions/683605/docker-container-time-timezone-will-not-reflect-changes
+ENV TZ America/Los_Angeles
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# git for installing dependencies
+# tzdata to set time zone
+# wget and unzip to download data
+# [2021-09-09] TD: zsh, stow, subversion, fasd are for setting up my personal environment.
+# [2021-12-07] TD: openmpi-bin for MPI (multi-node training)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    curl \
+    ca-certificates \
+    sudo \
+    less \
+    htop \
+    git \
+    tzdata \
+    wget \
+    tmux \
+    zip \
+    unzip \
+    zsh stow subversion fasd \
+    && rm -rf /var/lib/apt/lists/*
+    # openmpi-bin \
+
+# Allow running runmpi as root
+# ENV OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
+# # Create a non-root user and switch to it
+# RUN adduser --disabled-password --gecos '' --shell /bin/bash user \
+#     && echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-user
+# USER user
+
+# All users can use /home/user as their home directory
+ENV HOME=/home/user
+RUN mkdir -p /home/user && chmod 777 /home/user
+WORKDIR /home/user
+
+# Disable pip cache: https://stackoverflow.com/questions/45594707/what-is-pips-no-cache-dir-good-for
+ENV PIP_NO_CACHE_DIR=1
+
+# General packages that we don't care about the version
+RUN pip install pytest matplotlib jupyter ipython ipdb gpustat scikit-learn spacy munch einops opt_einsum fvcore gsutil cmake pykeops sympy \
+    && python -m spacy download en_core_web_sm
+# Core packages
+RUN pip install transformers==4.22.2
+
+# # Install FlashAttention
+RUN git clone https://github.com/HazyResearch/flash-attention \
+    && cd flash-attention && pip install . \
+    && cd .. && rm -rf flash-attention
 
 # Set up diffusers
 RUN git clone https://github.com/HazyResearch/diffusers \
